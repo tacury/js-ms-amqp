@@ -1,0 +1,55 @@
+version: '3'
+
+networks:
+  default:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.72.72.0/24
+
+services:
+  rabbitmq:
+    image: rabbitmq:alpine
+    container_name: test-rabbitmq
+    networks:
+      default:
+        aliases:
+          - rabbitmq
+    restart: always
+
+  m1:
+    image: node:18-alpine
+    container_name: test-m1
+    depends_on:
+      - rabbitmq
+      - m2
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 7s
+    networks:
+      - default
+    ports: ["9001:9001"]
+    volumes:
+      - ./m1:/app
+    command: >
+      sh -c "cd /app && yarn && yarn start"
+    restart: on-failure
+
+  m2:
+    image: node:18-alpine
+    container_name: test-m2
+    depends_on:
+      - rabbitmq
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 7s
+    networks:
+      - default
+    volumes:
+      - ./m2:/app
+    command: >
+      sh -c "cd /app && yarn && yarn start"
+    restart: on-failure
